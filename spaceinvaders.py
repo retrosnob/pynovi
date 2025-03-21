@@ -112,8 +112,8 @@ def check_collisions():
         if invader_bullet.alive and invader_bullet.is_touching(player):
             pn.play_sound("explode")
             pn.destroy(invader_bullet)
-            pn.end_game()
             game_over[0] = True
+            pn.end_game()
 
     invader_bullets[:] = [b for b in invader_bullets if b.alive]
 
@@ -123,8 +123,8 @@ def check_player_hit():
 
     for invader in invaders:
         if invader.alive and invader.is_touching(player):
-            pn.end_game()
             game_over[0] = True
+            pn.end_game()
             break
 
 def show_end_message():
