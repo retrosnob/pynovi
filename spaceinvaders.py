@@ -4,6 +4,9 @@ import random
 ASSETS_FOLDER = "spaceinvaders"
 
 WIDTH, HEIGHT = 800, 600
+INVADER_ROWS = 1
+INVADER_COLS = 1
+
 player = pn.create_entity(x=375, y=550, width=50, height=20, color=(0, 255, 0))
 bullet = None
 invaders = []
@@ -12,16 +15,15 @@ direction = [1]  # 1 = right, -1 = left
 invader_speed = [2]
 edge_margin = 30
 
-game_over = [False]  # Mutable flag to coordinate game state
-victory = [False]    # Flag to show if the player won
+game_state = ["running"]  # Options: "running", "victory", "defeat"
 
 # Load sounds
 pn.load_sound("shoot", ASSETS_FOLDER + "/shoot.wav")
 pn.load_sound("explode", ASSETS_FOLDER + "/explosion.wav")
 
 # Create invaders
-for row in range(3):
-    for col in range(8):
+for row in range(INVADER_ROWS):
+    for col in range(INVADER_COLS):
         invader = pn.create_entity(x=100 + col * 60, y=50 + row * 40, width=40, height=20, color=(255, 0, 0))
         invaders.append(invader)
 
@@ -29,7 +31,7 @@ for row in range(3):
 pn.set_key_cooldown("space", 15)
 
 def control():
-    if game_over[0]:
+    if game_state[0] != "running":
         return
 
     if pn.is_key_pressed("left") and player.x > 0:
@@ -50,13 +52,11 @@ def control():
         pn.play_sound("shoot")
 
 def move_invaders():
-    if game_over[0]:
+    if game_state[0] != "running":
         return
 
     if all(not invader.alive for invader in invaders):
-        victory[0] = True
-        game_over[0] = True
-        pn.end_game()
+        game_state[0] = "victory"
         return
 
     move_down = False
@@ -64,8 +64,7 @@ def move_invaders():
         if invader.alive:
             invader.x += direction[0] * invader_speed[0]
             if invader.is_touching(player):
-                pn.end_game()
-                game_over[0] = True
+                game_state[0] = "defeat"
             if (direction[0] > 0 and invader.x + invader.width >= WIDTH - edge_margin) or \
                (direction[0] < 0 and invader.x <= edge_margin):
                 move_down = True
@@ -77,7 +76,6 @@ def move_invaders():
             if invader.alive:
                 invader.y += 10
 
-    # Random invader fires a bullet occasionally
     if random.randint(1, 40) == 1:
         shooters = [invader for invader in invaders if invader.alive]
         if shooters:
@@ -93,7 +91,7 @@ def move_invaders():
             invader_bullets.append(bullet)
 
 def check_collisions():
-    if game_over[0]:
+    if game_state[0] != "running":
         return
 
     global bullet
@@ -112,32 +110,32 @@ def check_collisions():
         if invader_bullet.alive and invader_bullet.is_touching(player):
             pn.play_sound("explode")
             pn.destroy(invader_bullet)
-            game_over[0] = True
-            pn.end_game()
+            game_state[0] = "defeat"
 
     invader_bullets[:] = [b for b in invader_bullets if b.alive]
 
 def check_player_hit():
-    if game_over[0]:
+    if game_state[0] != "running":
         return
 
     for invader in invaders:
         if invader.alive and invader.is_touching(player):
-            game_over[0] = True
-            pn.end_game()
+            game_state[0] = "defeat"
             break
 
 def show_end_message():
-    if not game_over[0]:
+    if game_state[0] == "running":
         return
 
-    import pygame
-    font = pygame.font.Font(None, 72)
-    text = "YOU WIN" if victory[0] else "GAME OVER"
-    text_surface = font.render(text, True, (255, 255, 255))
-    text_rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-    screen = pygame.display.get_surface()
-    screen.blit(text_surface, text_rect)
+    pn.draw_text(
+        text="YOU WIN" if game_state[0] == "victory" else "GAME OVER",
+        x=WIDTH // 2,
+        y=HEIGHT // 2,
+        size=72,
+        color=(255, 255, 255),
+        center=True
+    )
+    pn.end_game()
 
 pn.on_update(control)
 pn.on_update(move_invaders)
@@ -147,3 +145,4 @@ pn.on_update(show_end_message)
 
 game = pn.Game(WIDTH, HEIGHT)
 game.start()
+    

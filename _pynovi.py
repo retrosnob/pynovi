@@ -104,6 +104,17 @@ def show_game_over(screen):
     text_rect = text_surface.get_rect(center=(400, 300))
     screen.blit(text_surface, text_rect)
 
+def draw_text(text, x, y, size=30, color=(255, 255, 255), center=False):
+    font = pygame.font.Font(None, size)
+    surface = pygame.display.get_surface()
+    text_surface = font.render(text, True, color)
+    rect = text_surface.get_rect()
+    if center:
+        rect.center = (x, y)
+    else:
+        rect.topleft = (x, y)
+    surface.blit(text_surface, rect)
+
 # Game loop
 class Game:
     def __init__(self, width=800, height=600, fps=30):
@@ -140,7 +151,7 @@ class Game:
             pygame.display.flip()
             self.clock.tick(self.fps)
 
-        pygame.quit()
+        pygame.quit()  
 
 def _handle_events():
     _keys_pressed.clear()
