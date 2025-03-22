@@ -98,12 +98,6 @@ def end_game():
     global _game_over
     _game_over = True
 
-def show_game_over(screen):
-    font = pygame.font.Font(None, 72)
-    text_surface = font.render("GAME OVER", True, (255, 255, 255))
-    text_rect = text_surface.get_rect(center=(400, 300))
-    screen.blit(text_surface, text_rect)
-
 def draw_text(text, x, y, size=30, color=(255, 255, 255), center=False):
     font = pygame.font.Font(None, size)
     surface = pygame.display.get_surface()
@@ -144,9 +138,6 @@ class Game:
             for entity in get_all():
                 entity.update()
                 entity.draw(self.screen)
-
-            if _game_over:
-                show_game_over(self.screen)
 
             pygame.display.flip()
             self.clock.tick(self.fps)
