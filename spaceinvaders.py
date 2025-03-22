@@ -124,18 +124,10 @@ def check_player_hit():
             break
 
 def show_end_message():
-    if game_state[0] == "running":
-        return
-
-    pn.draw_text(
-        text="YOU WIN" if game_state[0] == "victory" else "GAME OVER",
-        x=WIDTH // 2,
-        y=HEIGHT // 2,
-        size=72,
-        color=(255, 255, 255),
-        center=True
-    )
-    pn.end_game()
+    if game_state[0] == "victory":
+        pn.end_game("YOU WIN")
+    elif game_state[0] == "defeat":
+        pn.end_game("GAME OVER")
 
 pn.on_update(control)
 pn.on_update(move_invaders)
@@ -145,4 +137,3 @@ pn.on_update(show_end_message)
 
 game = pn.Game(WIDTH, HEIGHT)
 game.start()
-    

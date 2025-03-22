@@ -15,6 +15,7 @@ _last_accepted_press_frame = {}  # Tracks when the key was last allowed through 
 _frame_count = 0
 _sounds = {}
 _game_over = False
+_end_message = None  # <-- new
 
 # Constants
 KEY_MAP = {
@@ -94,9 +95,10 @@ def play_sound(name):
     if name in _sounds:
         _sounds[name].play()
 
-def end_game():
-    global _game_over
+def end_game(message=None):
+    global _game_over, _end_message
     _game_over = True
+    _end_message = message
 
 def draw_text(text, x, y, size=30, color=(255, 255, 255), center=False):
     font = pygame.font.Font(None, size)
@@ -139,10 +141,14 @@ class Game:
                 entity.update()
                 entity.draw(self.screen)
 
+            # Draw persistent end-of-game message if present
+            if _game_over and _end_message:
+                draw_text(_end_message, self.width // 2, self.height // 2, size=72, color=(255, 255, 255), center=True)
+
             pygame.display.flip()
             self.clock.tick(self.fps)
 
-        pygame.quit()  
+        pygame.quit()
 
 def _handle_events():
     _keys_pressed.clear()
