@@ -16,12 +16,19 @@ _frame_count = 0
 _sounds = {}
 _game_over = False
 _end_message = None  # <-- new
+_mouse_position = (0, 0)
+_mouse_buttons_down = set()
+_mouse_buttons_released = set()
 
 # Constants
 KEY_MAP = {
     "up": pygame.K_UP, "down": pygame.K_DOWN, "left": pygame.K_LEFT, "right": pygame.K_RIGHT,
     "space": pygame.K_SPACE, "escape": pygame.K_ESCAPE, "w": pygame.K_w, "s": pygame.K_s
 }
+
+MOUSE_LEFT = 1
+MOUSE_MIDDLE = 2
+MOUSE_RIGHT = 3
 
 # Core API
 class Entity:
@@ -82,6 +89,20 @@ def is_key_pressed(key_name):
 
     return key in _keys_pressed
 
+def get_mouse_position():
+    return _mouse_position
+
+def is_mouse_pressed(button=1):
+    # Has the button been pressed this frame
+    return button in _mouse_buttons_down
+
+def is_mouse_released(button=1):
+    return button in _mouse_buttons_released
+
+def is_mouse_held(button=1):
+    # Is the button down
+    return pygame.mouse.get_pressed()[button - 1]  # button is 1 (left), 2 (middle), 3 (right)
+
 def get_all():
     return [entity for entity in _entities if entity.alive]
 
@@ -137,9 +158,9 @@ class Game:
                 global _entities
                 _entities = [entity for entity in _entities if entity.alive]
 
-            for entity in get_all():
-                entity.update()
-                entity.draw(self.screen)
+                for entity in get_all():
+                    entity.update()
+                    entity.draw(self.screen)
 
             # Draw persistent end-of-game message if present
             if _game_over and _end_message:
@@ -152,6 +173,12 @@ class Game:
 
 def _handle_events():
     _keys_pressed.clear()
+    _mouse_buttons_down.clear()
+    _mouse_buttons_released.clear()
+
+    global _mouse_position
+    _mouse_position = pygame.mouse.get_pos()
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -164,4 +191,10 @@ def _handle_events():
             _keys_released.add(event.key)
             if event.key in _keys_held:
                 del _keys_held[event.key]
-    _keys_released.clear()
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            _mouse_buttons_down.add(event.button)
+        elif event.type == pygame.MOUSEBUTTONUP:
+            _mouse_buttons_released.add(event.button)
+
+    _keys_released.clear()  # ✅ must remain at the end of the function
+
