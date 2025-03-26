@@ -3,20 +3,24 @@ import random
 
 ASSETS_FOLDER = "spaceinvaders"
 
+# Game configuration
 WIDTH, HEIGHT = 800, 600
 INVADER_ROWS = 3
 INVADER_COLS = 8
+EDGE_MARGIN = 30
+MOVE_STEP = 10  # Horizontal move step, must divide evenly into screen width to prevent jitter
+MOVE_INTERVAL = [30]  # Frames between invader moves
+LAST_MOVE_FRAME = [-1]  # Last frame invaders moved
+PLAYER_SPEED = 5
+BULLET_SPEED = -8
+INVADER_BULLET_SPEED = 5
 
+# Game state
 player = pn.create_entity(x=375, y=550, width=50, height=20, color=(0, 255, 0))
 bullet = None
 invaders = []
 invader_bullets = []
 direction = [1]
-initial_speed = 1.5
-max_speed = 5
-invader_speed = [initial_speed]
-edge_margin = 30
-
 game_state = ["running"]  # "running", "victory", "defeat"
 
 # Load sounds
@@ -37,9 +41,9 @@ def control():
         return
 
     if pn.is_key_pressed("left") and player.x > 0:
-        player.x -= 5
+        player.x -= PLAYER_SPEED
     if pn.is_key_pressed("right") and player.x + player.width < WIDTH:
-        player.x += 5
+        player.x += PLAYER_SPEED
 
     global bullet
     if pn.is_key_pressed("space") and bullet is None:
@@ -49,7 +53,7 @@ def control():
             width=4,
             height=10,
             color=(255, 255, 0),
-            dy=-8
+            dy=BULLET_SPEED
         )
         pn.play_sound("shoot")
 
@@ -62,30 +66,43 @@ def move_invaders():
         game_state[0] = "victory"
         return
 
+    if pn._frame_count - LAST_MOVE_FRAME[0] < MOVE_INTERVAL[0]:
+        return
+
+    # Check for edge collision first
     move_down = False
     for invader in alive_invaders:
-        invader.x += direction[0] * invader_speed[0]
+        next_x = invader.x + direction[0] * MOVE_STEP
+        if (direction[0] > 0 and next_x + invader.width > WIDTH - EDGE_MARGIN) or \
+           (direction[0] < 0 and next_x < EDGE_MARGIN):
+            move_down = True
+            break
+
+    # Move invaders
+    for invader in alive_invaders:
+        if move_down:
+            invader.y += MOVE_STEP
+        else:
+            invader.x += direction[0] * MOVE_STEP
+
         if invader.is_touching(player):
             game_state[0] = "defeat"
-        if (direction[0] > 0 and invader.x + invader.width >= WIDTH - edge_margin) or \
-           (direction[0] < 0 and invader.x <= edge_margin):
-            move_down = True
 
     if move_down:
         direction[0] *= -1
-        # Update speed: % destroyed
-        destroyed = len([i for i in invaders if not i.alive])
-        total = len(invaders)
-        proportion = destroyed / total
-        invader_speed[0] = initial_speed + (max_speed - initial_speed) * proportion
-        invader_speed[0] = min(invader_speed[0], max_speed)
 
-        for invader in alive_invaders:
-            invader.y += 10
+    LAST_MOVE_FRAME[0] = pn._frame_count
+    pn.play_sound("invader_move")
 
-        pn.play_sound("invader_move")
+    # Update move interval based on number of invaders left
+    alive_count = len(alive_invaders)
+    min_interval = 2
+    max_interval = 30
+    total = len(invaders)
+    ratio = (alive_count - 1) / (total - 1) if total > 1 else 0
+    MOVE_INTERVAL[0] = int(min_interval + (max_interval - min_interval) * ratio)
 
-    # Invader fires randomly
+    # Fire randomly
     if random.randint(1, 40) == 1:
         shooter = random.choice(alive_invaders)
         new_bullet = pn.create_entity(
@@ -94,7 +111,7 @@ def move_invaders():
             width=4,
             height=10,
             color=(0, 255, 255),
-            dy=5 if game_state[0] == "running" else 0
+            dy=INVADER_BULLET_SPEED if game_state[0] == "running" else 0
         )
         invader_bullets.append(new_bullet)
 
