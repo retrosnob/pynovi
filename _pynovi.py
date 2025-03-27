@@ -9,9 +9,26 @@ pygame.mixer.init()
 # -------------------------------------------------------------------
 
 KEY_MAP = {
+    # Arrow keys and control keys
     "up": pygame.K_UP, "down": pygame.K_DOWN, "left": pygame.K_LEFT, "right": pygame.K_RIGHT,
-    "space": pygame.K_SPACE, "escape": pygame.K_ESCAPE, "w": pygame.K_w, "s": pygame.K_s
+    "space": pygame.K_SPACE, "escape": pygame.K_ESCAPE,
+
+    # Special keys
+    "enter": pygame.K_RETURN, "tab": pygame.K_TAB,
+    "shift": pygame.K_LSHIFT, "shift_r": pygame.K_RSHIFT,
+
+    # Common punctuation and symbols
+    ",": pygame.K_COMMA, ".": pygame.K_PERIOD, "/": pygame.K_SLASH,
+    "-": pygame.K_MINUS, "=": pygame.K_EQUALS,
+    "[": pygame.K_LEFTBRACKET, "]": pygame.K_RIGHTBRACKET,
+    "\\": pygame.K_BACKSLASH, "'": pygame.K_QUOTE, ";": pygame.K_SEMICOLON,
+    "`": pygame.K_BACKQUOTE
 }
+
+# Add letter and number keys dynamically
+KEY_MAP.update({chr(c): getattr(pygame, f"K_{chr(c)}") for c in range(ord('a'), ord('z') + 1)})
+KEY_MAP.update({str(i): getattr(pygame, f"K_{i}") for i in range(10)})
+
 
 # -------------------------------------------------------------------
 # Internal Input Manager (Not exposed to students)
@@ -19,6 +36,7 @@ KEY_MAP = {
 
 class InputManager:
     def __init__(self):
+        self.mouse_motion = (0, 0)
         self.keys_pressed = set()
         self.keys_released = set()
         self.keys_held = {}
@@ -30,7 +48,10 @@ class InputManager:
         self.mouse_position = (0, 0)
 
     def update(self, frame_count):
+        self.mouse_motion = pygame.mouse.get_rel()
+        # Clear keys that were newly pressed or released in the previous frame
         self.keys_pressed.clear()
+        self.keys_released.clear()
         self.mouse_buttons_down.clear()
         self.mouse_buttons_released.clear()
         self.mouse_position = pygame.mouse.get_pos()
@@ -43,7 +64,6 @@ class InputManager:
                 self.keys_pressed.add(event.key)
                 self.keys_held[event.key] = frame_count
             elif event.type == pygame.KEYUP:
-                self.keys_pressed.discard(event.key)
                 self.keys_released.add(event.key)
                 if event.key in self.keys_held:
                     del self.keys_held[event.key]
@@ -51,8 +71,6 @@ class InputManager:
                 self.mouse_buttons_down.add(event.button)
             elif event.type == pygame.MOUSEBUTTONUP:
                 self.mouse_buttons_released.add(event.button)
-
-        self.keys_released.clear()
 
     def is_key_pressed(self, key_name, frame_count):
         key = KEY_MAP.get(key_name)
@@ -88,15 +106,17 @@ class InputManager:
     def get_mouse_position(self):
         return self.mouse_position
 
-
 _input = InputManager()
 
 # -------------------------------------------------------------------
 # Input functions exposed to students
 # -------------------------------------------------------------------
 
+def get_mouse_motion():
+    return _input.mouse_motion
+
 def is_key_pressed(key_name):
-    return _input.is_key_pressed(key_name, _frame_count)
+    return _input.is_key_pressed(key_name, Game.frame_count)
 
 def is_key_held(key_name):
     return _input.is_key_held(key_name)
@@ -122,7 +142,6 @@ def get_mouse_position():
 
 _entities = []
 _entity_behaviors = []
-_frame_count = 0
 _sounds = {}
 _game_over = False
 _end_message = None
@@ -132,6 +151,10 @@ _end_message = None
 # -------------------------------------------------------------------
 
 class Entity:
+    def is_touching_mouse(self):
+        mx, my = get_mouse_position()
+        return self.x <= mx <= self.x + self.width and self.y <= my <= self.y + self.height
+
     def __init__(self, x, y, width=50, height=50, color=(255, 0, 0), dx=0, dy=0):
         self.x = x
         self.y = y
@@ -146,7 +169,10 @@ class Entity:
         self.x += self.dx
         self.y += self.dy
 
-        if self.y < -self.height or self.y > 600 or self.x < -self.width or self.x > 800:
+        screen = pygame.display.get_surface()
+        screen_width, screen_height = screen.get_size()
+
+        if self.y < -self.height or self.y > screen_height or self.x < -self.width or self.x > screen_width:
             self.alive = False
 
     def draw(self, screen):
@@ -210,7 +236,12 @@ def end_game(message=None):
     _end_message = message
 
 class Game:
+    frame_count = 0  # class variable to track global frame count
+
     def __init__(self, width=800, height=600, fps=30):
+        if not (200 <= width <= 1600 and 200 <= height <= 1200):
+            raise ValueError("Screen size must be between 200x200 and 1600x1200 for flexibility and compatibility.")
+
         self.width = width
         self.height = height
         self.fps = fps
@@ -220,11 +251,11 @@ class Game:
         self.running = False
 
     def start(self):
-        global _frame_count, _entities
+        global _entities
         self.running = True
         while self.running:
-            _frame_count += 1
-            _input.update(_frame_count)
+            Game.frame_count += 1
+            _input.update(Game.frame_count)
             self.screen.fill((0, 0, 0))
 
             if not _game_over:

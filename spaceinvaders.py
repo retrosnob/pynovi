@@ -92,7 +92,7 @@ def move_invaders():
         return
 
     # Only move invaders after enough time has passed
-    if pn._frame_count - last_move_frame < move_interval:
+    if pn.Game.frame_count - last_move_frame < move_interval:
         return
 
     move_down = False
@@ -121,7 +121,7 @@ def move_invaders():
         direction *= -1
 
     # Record the last time invaders moved
-    last_move_frame = pn._frame_count
+    last_move_frame = pn.Game.frame_count
     pn.play_sound("invader_move")
 
     # Adjust move speed based on how many invaders are left
